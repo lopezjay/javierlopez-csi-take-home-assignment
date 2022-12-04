@@ -1,0 +1,79 @@
+{
+    {
+      "content": [
+        {
+          "name": "MI3",
+          "preroll": [
+            {
+              "name": "WB1"
+            }
+          ],
+          "videos": [
+            {
+              "name": "V1",
+              "attributes": {
+                "countries": [
+                  "US",
+                  "UK",
+                  "CA"
+                ],
+                "language": "English"
+              }
+            },
+            {
+              "name": "V2",
+              "attributes": {
+                "countries": [
+                  "CA"
+                ],
+                "language": "French"
+              }
+            },
+            {
+              "name": "V3",
+              "attributes": {
+                "countries": [
+                  "US"
+                ],
+                "language": "Spanish"
+              }
+            }
+          ]
+        }
+      ],
+      "preroll": [
+        {
+          "name": "WB1",
+          "videos": [
+            {
+              "name": "V4",
+              "attributes": {
+                "countries": [
+                  "US"
+                ],
+                "language": "English"
+              }
+            },
+            {
+              "name": "V5",
+              "attributes": {
+                "countries": [
+                  "CA"
+                ],
+                "language": "French"
+              }
+            },
+            {
+              "name": "V6",
+              "attributes": {
+                "countries": [
+                  "US"
+                ],
+                "language": "Spanish"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
