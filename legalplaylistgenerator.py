@@ -7,7 +7,6 @@ Legal Playlist Generator Library
 # Standard Library Imports
 import json
 import pickle
-from typing import List
 
 # Third Party Imports
 from pydantic import BaseModel
@@ -34,7 +33,7 @@ class AssetTableGenerator:
         "video": Video
     }
 
-    def create_asset_table(self, asset_type: str) -> None:
+    def _create_asset_table(self, asset_type: str) -> None:
         """
         Create an Asset table for optimized lookup
         """
@@ -44,7 +43,7 @@ class AssetTableGenerator:
         if not asset_table:
             setattr(self, f"{asset_type}_table", {})
 
-    def create_asset_tables_by_category(self, asset_category: str) -> None:
+    def _create_asset_tables_by_category(self, asset_category: str) -> None:
         """
         Create Asset tables for a given Asset category
         """
@@ -55,30 +54,17 @@ class AssetTableGenerator:
             raise ValueError("f{asset_category} is not a known asset category")
 
         for asset_type in asset_types:
-            self.create_asset_table(asset_type)
-
-    def create_logical_asset_tables(self) -> None:
-        """Create Asset tables for Logical assets"""
-        self.create_asset_tables_by_category("logical")
-
-    def create_physical_asset_tables(self) -> None:
-        """Create Asset tables for Physical assets"""
-        self.create_asset_tables_by_category("physical")
+            self._create_asset_table(asset_type)
 
     def get_asset_table(self, asset_type: str) -> dict:
         return getattr(self, f"{asset_type}_table", None)
-
-    def get_all_assets_from_table(self, asset_type: str) -> List[BaseModel]:
-        asset_table = self.get_asset_table(asset_type)
-
-        if asset_table:
-            return [asset_table[asset_name] for asset_name in asset_table]
 
     def get_asset_from_table(self, asset_type: str, asset_name: str) -> BaseModel:
         asset_table = self.get_asset_table(asset_type)
 
         if asset_table:
-            return asset_table.get(asset_name)
+            asset = asset_table.get(asset_name)
+            return pickle.loads(asset) if asset else None
 
     def update_asset_table(self, asset_type: str, asset: BaseModel, asset_key: str=None) -> None:
         asset_table = self.get_asset_table(asset_type)
@@ -86,12 +72,11 @@ class AssetTableGenerator:
         if asset_table is not None:
             asset_table[asset_key or asset.name] = pickle.dumps(asset)
 
-    def run(self, inventory: dict) -> None:
+    def generate_asset_tables(self, inventory: dict) -> None:
 
         # Initialize Asset tables
-        self.create_logical_asset_tables()
-
-        self.create_physical_asset_tables()
+        self._create_asset_tables_by_category("logical")
+        self._create_asset_tables_by_category("physical")
 
         # Get top level Logical assets from the inventory
         for logical_asset_type in inventory:
@@ -114,23 +99,77 @@ class AssetTableGenerator:
 
 
 class LegalPlaylistGenerator:
-    def __init__(self) -> None:
-        self.playlist = []
-        self.assets = []
+    def __init__(self, inventory_path: str="inventory.json") -> None:
+        self.inventory_path = inventory_path
+        self._playlists = {}
+        self._asset_table_generator = None
+
+    def _generate_assets(self) -> None:
+        # Parse input inventory file
+        inventory = {}
+
+        try:
+            with open(self.inventory_path, "r") as inventory_file:
+                inventory = json.load(inventory_file)
+        except Exception as err:
+            print(f"Could not parse inventory file {self.inventory_path}: {repr(err)}")
+        else:
+            self._asset_table_generator = AssetTableGenerator()
+            self._asset_table_generator.generate_asset_tables(inventory)
 
     def generate_playlist(self, content_name: str, country: str):
-        pass
+        self._generate_assets()
+
+        content = self._asset_table_generator.get_asset_from_table("content", content_name)
+
+        video_asset_table = self._asset_table_generator.get_asset_table("video")
+
+        if not content:
+            print(f"Content not found: {content_name}")
+            return
+
+        if content.preroll:
+            for content_preroll in content.preroll:
+                preroll = self._asset_table_generator.get_asset_from_table("preroll", content_preroll.name)
+
+                if not preroll:
+                    print(f"Pre-Roll not found: {content_preroll.name}")
+                    continue
+
+            for video_key in video_asset_table:
+                video = self._asset_table_generator.get_asset_from_table("video", video_key)
+
+                if video.country == country and video.preroll == preroll.name:
+                    if video.language not in self._playlists:
+                        self._playlists[video.language] = []
+    
+                    if video not in self._playlists[video.language]:
+                        self._playlists[video.language].append(video)
+    
+        for video_key in video_asset_table:
+            video = self._asset_table_generator.get_asset_from_table("video", video_key)
+
+            if video.country == country and video.content == content_name:
+                if video.language not in self._playlists:
+                    self._playlists[video.language] = []
+
+                if video not in self._playlists[video.language]:
+                    self._playlists[video.language].append(video)
+
+        for language in list(self._playlists.keys()):
+            if len(self._playlists[language]) <= 1:
+                del self._playlists[language]
+
+        if not self._playlists:
+            print("No legal playlist(s) possible")
+            return
+
+        playlist_ctr = 1
+        for playlist in self._playlists.values():
+            playlist_str = "{" + ','.join([video.name for video in playlist]) + "}"
+            print(f"Playlist{playlist_ctr}\n\n{playlist_str}\n")
+            playlist_ctr += 1
 
 
-# Parse input inventory
-with open("inventory.json") as inventory_file:
-    inventory = json.load(inventory_file)
-
-a = AssetTableGenerator()
-
-a.run(inventory)
-
-print(pickle.loads(a.get_asset_table("content")["MI3"]))
-print(pickle.loads(a.get_asset_table("preroll")["WB1"]))
-for k,v in a.get_asset_table("video").items():
-    print(pickle.loads(v))
+l = LegalPlaylistGenerator(inventory_path="inventory.json")
+l.generate_playlist("MI3", "US")
