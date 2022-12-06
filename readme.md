@@ -13,6 +13,11 @@ l.generate_playlist("MI3", "CA")
 ```
 
 ```bash
+pip3 install -r requirements.txt
+python3 legalplaylistgenerator.py
+```
+
+```bash
 Output:
 Playlist1
 
