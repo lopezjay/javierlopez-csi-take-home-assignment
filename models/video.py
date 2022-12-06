@@ -5,52 +5,68 @@ Object Model Definition for Videos
 """
 
 # Standard Library Imports
+from typing import List
 
 # Third Party Imports
 from pydantic import BaseModel, validator
 
 
-class Video(BaseModel):
-    """
-    name varchar(255) NOT NULL,
-    content varchar(255),
-    country varchar(255) NOT NULL,
-    language varchar(255) NOT NULL,
-    preroll varchar(255),
-    PRIMARY KEY (name)
-    """
-    name: str
-    content: str
-    country: str
+class VideoAttributes(BaseModel):
+    """Helper Object Model for Video Attributes
+    
+    Attributes
+    ----------
+    countries: List[str]
+        Countries associated with a Video
     language: str
-    preroll: str
+        Language associated with a Video
+    """
 
-    @validator('name')
-    def name_must_not_be_empty(cls, value):
-        if not len(value):
-            raise ValueError("Name cannot be empty")
+    countries: List[str]
+    language: str
+
+    @validator('countries')
+    def countries_must_not_be_null(cls, value):
+        if not value:
+            raise ValueError("Countries cannot be empty")
         return value
 
-    @validator('content')
-    def content_must_not_be_empty(cls, value):
-        if not len(value):
-            raise ValueError("Content cannot be empty")
-        return value
-
-    @validator('country')
-    def country_must_not_be_empty(cls, value):
-        if not len(value):
+    @validator('countries', each_item=True)
+    def countries_each_item_must_not_be_null(cls, value):
+        if not value:
             raise ValueError("Country cannot be empty")
         return value
 
     @validator('language')
-    def language_must_not_be_empty(cls, value):
-        if not len(value):
+    def language_must_not_be_null(cls, value):
+        if not value:
             raise ValueError("Language cannot be empty")
         return value
 
-    @validator('preroll')
-    def preroll_must_not_be_empty(cls, value):
-        if not len(value):
-            raise ValueError("Preroll cannot be empty")
+
+class Video(BaseModel):
+    """
+    Object Model for a Video
+
+    Attributes
+    ----------
+    name: str
+        Name associated with a Video
+    attributes: VideoAttributes
+        Attributes associated with a Video
+    """
+
+    name: str
+    attributes: VideoAttributes
+
+    @validator('name')
+    def name_must_not_be_null(cls, value):
+        if not value:
+            raise ValueError("Name cannot be empty")
+        return value
+
+    @validator('attributes')
+    def attributes_must_not_be_null(cls, value):
+        if not value:
+            raise ValueError("Attributes cannot be null")
         return value
