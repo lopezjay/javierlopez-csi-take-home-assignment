@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Legal Playlist Generator
 
 ## Application for generating Legal Playlists from a collection of Content available in a given Country
